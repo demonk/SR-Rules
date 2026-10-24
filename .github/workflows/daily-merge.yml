@@ -24,17 +24,23 @@ jobs:
       - name: Download upstream configs & merge custom rules
         run: bash scripts/build.sh
 
+      - name: Generate QR codes (shadowrocket://config/add/...)
+        run: |
+          python3 -m venv .venv-ci
+          .venv-ci/bin/pip install --quiet 'qrcode[pil]'
+          .venv-ci/bin/python scripts/gen_qrcodes.py
+
       - name: Commit and push
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if [[ -z "$(git status --porcelain -- dist)" ]]; then
+          if [[ -z "$(git status --porcelain -- dist qrcode)" ]]; then
             echo "No changes, skipping commit."
             exit 0
           fi
 
-          git add dist
+          git add dist qrcode
           git commit -m "chore(rules): daily merge custom rules [skip ci]"
           # 拉取远端最新提交，避免推送被拒
           git pull --rebase origin "${GITHUB_REF_NAME}"

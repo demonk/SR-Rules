@@ -40,6 +40,18 @@ https://raw.githubusercontent.com/demonk/SR-Rules/latest/dist/<配置文件名>
 
 > 说明：`latest` 是"移动标签"，每次构建后被 `-f` 重打到新 commit；若需要**版本快照**语义（同一 URL 内容永久不变），可基于它再打带日期的标签或直接使用对应 commit 的 raw 地址。
 
+## 二维码（qrcode/）
+
+每个配置对应一张固定内容的导入二维码（`qrcode/<配置名>.png`），扫码即在 Shadowrocket 中打开配置导入页。二维码内容为：
+
+```
+shadowrocket://config/add/https://raw.githubusercontent.com/demonk/SR-Rules/latest/dist/<配置文件名>
+```
+
+- 因指向 `latest` 标签，二维码**一次生成、永久有效**，内容不随每日构建变化；
+- 配置清单增删后，workflow 会自动重新生成（也可本地执行：`.venv/bin/python scripts/gen_qrcodes.py`，首次需 `python3 -m venv .venv && .venv/bin/pip install "qrcode[pil]"`）；
+- 二维码图片同样有固定地址，例如 `https://raw.githubusercontent.com/demonk/SR-Rules/latest/qrcode/sr_top500_banlist_ad.png`。
+
 ## 使用方式
 
 1. 仓库 Settings → Actions → General → Workflow permissions 选择 **Read and write permissions**（或保持代码里的 `permissions: contents: write` 生效的前提：账户未强制默认只读）；
