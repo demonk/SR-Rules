@@ -49,7 +49,7 @@ shadowrocket://config/add/https://raw.githubusercontent.com/demonk/SR-Rules/late
 ```
 
 - 因指向 `latest` 标签，二维码**一次生成、永久有效**，内容不随每日构建变化；
-- 配置清单增删后，workflow 会自动重新生成（也可本地执行：`.venv/bin/python scripts/gen_qrcodes.py`，首次需 `python3 -m venv .venv && .venv/bin/pip install "qrcode[pil]"`）；
+- 二维码不随每日构建生成（内容为静态地址，无需重建）。仅当 `build.sh` 的 `CONFIGS` 清单增删时，手动重新生成一次并提交：`.venv/bin/python scripts/gen_qrcodes.py`（首次需 `python3 -m venv .venv && .venv/bin/pip install "qrcode[pil]"`）；
 - 二维码图片同样有固定地址，例如 `https://raw.githubusercontent.com/demonk/SR-Rules/latest/qrcode/sr_top500_banlist_ad.png`。
 
 ## 使用方式
