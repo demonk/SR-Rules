@@ -1,0 +1,41 @@
+name: Daily merge custom rules
+
+on:
+  schedule:
+    # GitHub 的 cron 使用 UTC 时间；01:00 UTC = 北京时间 09:00
+    - cron: '0 1 * * *'
+  # 支持在 Actions 页面手动触发
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-merge
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download upstream configs & merge custom rules
+        run: bash scripts/build.sh
+
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [[ -z "$(git status --porcelain -- dist)" ]]; then
+            echo "No changes, skipping commit."
+            exit 0
+          fi
+
+          git add dist
+          git commit -m "chore(rules): daily merge custom rules [skip ci]"
+          # 拉取远端最新提交，避免推送被拒
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
