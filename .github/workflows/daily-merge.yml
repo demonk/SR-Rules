@@ -39,3 +39,13 @@ jobs:
           # 拉取远端最新提交，避免推送被拒
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Move latest tag to built commit
+        run: |
+          # 把 latest 标签强制指向远端分支最新 commit（无论本次是否产生新提交），
+          # 使产物拥有一个永久固定的访问地址
+          SHA="$(git ls-remote origin "refs/heads/${GITHUB_REF_NAME}" | cut -f1)"
+          [[ -n "${SHA}" ]] || { echo "ERROR: 无法解析远端 HEAD" >&2; exit 1; }
+          git tag -f latest "${SHA}"
+          git push -f origin refs/tags/latest
+          echo "latest -> ${SHA}"
