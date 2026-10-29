@@ -37,9 +37,13 @@ fail() { echo "ERROR: $*" >&2; exit 1; }
 
 [[ -f "${CUSTOM_FILE}" ]] || fail "本地自定义规则文件不存在: ${CUSTOM_FILE}"
 
-# 校验自定义规则文件：非空且只包含规则/注释行（防止误改文件导致上游配置被破坏）
-if ! grep -qE '^(DOMAIN|IP|GEOIP|PROCESS|AND|OR|NOT)' "${CUSTOM_FILE}"; then
-  fail "自定义规则文件中未找到任何规则行，请检查 ${CUSTOM_FILE}"
+# 校验自定义规则文件：空文件视为异常直接失败；
+# 全部规则被注释（0 条生效）视为"有意停用"，警告后继续（合并块只含注释，不影响上游规则）
+if [[ ! -s "${CUSTOM_FILE}" ]]; then
+  fail "自定义规则文件为空: ${CUSTOM_FILE}"
+fi
+if ! grep -qE '^[[:space:]]*(DOMAIN|IP|GEOIP|PROCESS|AND|OR|NOT)' "${CUSTOM_FILE}"; then
+  echo "WARNING: 自定义规则文件中没有生效的规则行（已全部注释，产物将回退为纯上游规则）" >&2
 fi
 
 mkdir -p "${OUT_DIR}"
