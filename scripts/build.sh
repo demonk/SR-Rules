@@ -50,7 +50,7 @@ for name in "${CONFIGS[@]}"; do
   raw="${TMP_DIR}/${name}"
 
   echo "==> 下载 ${url}"
-  curl -fsSL --retry 3 --retry-delay 5 --max-time 120 -o "${raw}" "${url}" \
+  curl -fsSL --retry 5 --retry-delay 3 --speed-limit 10240 --speed-time 30 --max-time 600 -o "${raw}" "${url}" \
     || fail "下载失败: ${url}"
 
   # 基本完整性校验：必须包含 [Rule] 段，避免把错误页提交进仓库
