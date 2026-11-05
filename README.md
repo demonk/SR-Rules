@@ -1,18 +1,24 @@
 # SR-Rules —— Shadowrocket 规则每日合并
 
-每天北京时间 9:00 自动从 [Johnshall/Shadowrocket-ADBlock-Rules-Forever](https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever) 拉取上游配置，与本地 [`sr-custom-banlist.conf`](sr-custom-banlist.conf) 合并后提交到本仓库 `dist/` 目录（文件名与上游一致）。
+每天北京时间 9:00 自动从 [Johnshall/Shadowrocket-ADBlock-Rules-Forever](https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever) 拉取上游配置，与本地 [`sr_custom_banlist.conf`](sr_custom_banlist.conf) 合并后提交到本仓库 `dist/` 目录（文件名与上游一致）。
 
 ## 合并逻辑
 
-- 自定义规则整块插入到每个上游配置 `[Rule]` 段的**最前面**；
-- Shadowrocket 规则自上而下匹配，因此自定义规则优先于上游规则生效（可用来覆盖上游的 DIRECT/REJECT 行为）；
+- **命名约定（自动匹配）**：本地自定义规则文件以 `sr_custom_<X>.conf` 命名，脚本自动发现所有此类文件，每个文件**只合并进名字包含 `<X>` 的上游配置**：
+  - `sr_custom_banlist.conf` → 仅 `*banlist*` 的配置（当前为 `sr_top500_banlist.conf`、`sr_top500_banlist_ad.conf`）；
+  - 例如新增 `sr_custom_whitelist.conf` → 自动仅合并进 `*whitelist*` 配置，无需改脚本；
+  - 一个上游配置可同时命中多个自定义文件（如 `sr_custom_banlist.conf` 与 `sr_custom_top500_banlist.conf`），按文件名顺序依次插入；
+  - 未命中任何自定义文件的配置原样透传到 `dist/`。
+- 自定义规则整块插入到命中的上游配置 `[Rule]` 段的**最前面**；Shadowrocket 规则自上而下匹配，因此自定义规则优先于上游规则生效（可用来覆盖上游的 DIRECT/REJECT 行为）；
+- 每个来源块以 `# >>> auto-merged from <文件名> begin ... >>>` / `# <<< ... end <<<` 标记；
+- 规则文件为空 → 构建失败；规则全部注释 → 视为有意停用，警告后按仅注释块合并；
 - 构建脚本会校验下载完整性（必须包含 `[Rule]` 段），异常时任务失败、不会产生坏提交。
 
 ## 同步的配置清单
 
 `sr_top500_banlist_ad.conf`、`sr_top500_whitelist_ad.conf`、`sr_top500_banlist.conf`、`sr_top500_whitelist.conf`、`sr_cnip_ad.conf`、`sr_cnip.conf`、`sr_direct_banad.conf`、`sr_proxy_banad.conf`、`sr_backcn.conf`、`sr_backcn_ad.conf`、`sr_ad_only.conf`
 
-增删配置：修改 `scripts/build.sh` 里的 `CONFIGS` 数组即可。
+增删上游配置：修改 `scripts/build.sh` 里的 `CONFIGS` 数组；新增自定义规则集：直接创建 `sr_custom_<X>.conf` 文件即可。
 
 ## 产物固定访问地址
 
