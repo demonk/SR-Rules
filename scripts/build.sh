@@ -49,6 +49,65 @@ custom_key() {  # sr_custom_<X>.conf -> <X>
   echo "${b%.conf}"
 }
 
+# ---------- sr_top500_whitelist_ad.conf 专用覆盖 ----------
+# 1) 合并 sr_custom_banlist.conf 的有效规则（置顶，同域名优先）
+# 2) Apple 定位/客户端域名强制 PROXY
+# 3) 移除 DOMAIN-SUFFIX,cn,DIRECT 与 GEOIP,CN,DIRECT
+# 4) skip-proxy 移除 *.ls.apple.com，避免绕过代理
+apply_whitelist_ad_overrides() {
+  local file="$1" custom="$2" tmp
+  [[ -f "${file}" ]] || fail "待处理文件不存在: ${file}"
+  [[ -f "${custom}" ]] || fail "自定义规则文件不存在: ${custom}"
+  tmp="$(mktemp "${TMP_DIR}/whitelist_ad.XXXXXX")"
+
+  awk -v custom="${custom}" '
+    BEGIN {
+      n = split("gs-loc.apple.com gs-loc-cn.apple.com ls.apple.com cl1.apple.com cl2.apple.com cl3.apple.com cl4.apple.com cl5.apple.com cl2-cn.apple.com cl4-cn.apple.com clientflow.apple.com", domains, " ")
+      for (i = 1; i <= n; i++) target[domains[i]] = 1
+    }
+    function emit_block(   line) {
+      print "# >>> whitelist_ad overrides begin (auto-generated, do not edit) >>>"
+      print "# 来自 sr_custom_banlist.conf 的有效规则（优先于同域名规则）"
+      while ((getline line < custom) > 0) {
+        if (line ~ /^[[:space:]]*(DOMAIN|IP-CIDR|IP6-CIDR|GEOIP|PROCESS|AND|OR|NOT|USER-AGENT|URL-REGEX)/) print line
+      }
+      close(custom)
+      print "# Apple 定位/客户端域名强制代理"
+      print "DOMAIN-SUFFIX,gs-loc.apple.com,PROXY"
+      print "DOMAIN-SUFFIX,gs-loc-cn.apple.com,PROXY"
+      print "DOMAIN-SUFFIX,ls.apple.com,PROXY"
+      print "DOMAIN-SUFFIX,cl1.apple.com,PROXY"
+      print "DOMAIN-SUFFIX,cl2.apple.com,PROXY"
+      print "DOMAIN-SUFFIX,cl3.apple.com,PROXY"
+      print "DOMAIN-SUFFIX,cl4.apple.com,PROXY"
+      print "DOMAIN-SUFFIX,cl5.apple.com,PROXY"
+      print "DOMAIN-SUFFIX,cl2-cn.apple.com,PROXY"
+      print "DOMAIN-SUFFIX,cl4-cn.apple.com,PROXY"
+      print "DOMAIN-SUFFIX,clientflow.apple.com,PROXY"
+      print "# <<< whitelist_ad overrides end <<<"
+    }
+    /^\[Rule\][[:space:]]*$/ {
+      print
+      emit_block()
+      next
+    }
+    /^skip-proxy[[:space:]]*=/ {
+      sub(/, \*\.ls\.apple\.com/, "")
+      print
+      next
+    }
+    tolower($0) == "domain-suffix,cn,direct" { next }
+    tolower($0) == "geoip,cn,direct" { next }
+    /^DOMAIN-SUFFIX,/ {
+      split($0, parts, ",")
+      if (parts[2] in target) next
+    }
+    { print }
+  ' "${file}" > "${tmp}"
+
+  mv "${tmp}" "${file}"
+}
+
 for cf in "${CUSTOM_FILES[@]}"; do
   [[ -s "$cf" ]] || fail "自定义规则文件为空: $cf"
   if ! grep -qE '^[[:space:]]*(DOMAIN|IP|GEOIP|PROCESS|AND|OR|NOT)' "$cf"; then
@@ -115,6 +174,11 @@ for name in "${CONFIGS[@]}"; do
         || fail "${name} 合并失败（缺少 $(basename "${cf}") 块）"
     done
     echo "    已合并:${match_names} -> dist/${name}"
+  fi
+
+  if [[ "${name}" == "sr_top500_whitelist_ad.conf" ]]; then
+    apply_whitelist_ad_overrides "${OUT_DIR}/${name}" "${REPO_ROOT}/sr_custom_banlist.conf"
+    echo "    已应用 whitelist_ad 专用覆盖（custom banlist + Apple PROXY + 移除 CN 直连）"
   fi
 
   processed=$((processed + 1))
