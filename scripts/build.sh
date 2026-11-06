@@ -102,10 +102,21 @@ apply_whitelist_ad_overrides() {
       split($0, parts, ",")
       if (parts[2] in target) next
     }
+    /^FINAL[[:space:]]*,/ && !cn_added {
+      print "RULE-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/ChinaMaxNoIP/ChinaMaxNoIP.list,Direct"
+      print "DOMAIN-SET,https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/ChinaMaxNoIP/ChinaMaxNoIP_Domain.list,Direct"
+      print ""
+      cn_added = 1
+    }
     { print }
   ' "${file}" > "${tmp}"
 
   mv "${tmp}" "${file}"
+
+  grep -qF "ChinaMaxNoIP.list,Direct" "${file}" \
+    || fail "whitelist_ad 覆盖失败：缺少 ChinaMaxNoIP RULE-SET"
+  grep -qF "ChinaMaxNoIP_Domain.list,Direct" "${file}" \
+    || fail "whitelist_ad 覆盖失败：缺少 ChinaMaxNoIP DOMAIN-SET"
 }
 
 for cf in "${CUSTOM_FILES[@]}"; do
